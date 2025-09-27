@@ -3,6 +3,8 @@
 #include <SFML/System.hpp>
 #include <iostream>
 #include <cmath>
+#include <ctime>
+#include <random>
 #include <vector>
 using namespace std;
 
@@ -21,6 +23,8 @@ class Ball {
         float contactxpos;
         float contactypos;
         sf::CircleShape shape;
+
+        Ball() {}
 
         Ball(float radius, float x, float y, float velocity, float angle, float mass) {
             this->radius = radius;
@@ -185,148 +189,332 @@ class clickBoxes {
         }
 };
 
-void Texts(sf::Text &text, std::string name, int fontsize, sf::Color color, sf::Vector2f position) {
-        text.setString(name);
-        text.setCharacterSize(fontsize);
-        text.setFillColor(color);
-        text.setPosition(position);
-}
+class Texts {
+    public:
+        sf::Font font;
+        sf::Text text;
+        std::string name;
+        sf::Color color;
+        sf::Vector2f position;
+        int fontsize;
+        int ballNumber;
 
-sf::Text TextBoxes(sf::Font font, int number, float ballnumber) {
-    sf::Vector2f setposition = {140, 190 + (ballnumber*60)};
-    sf::Text textbox(font);
-    textbox.setFillColor(sf::Color::White);
-    std::string numberString = std::to_string(number);
-    textbox.setString("Ball " + numberString);
-    textbox.setPosition(setposition);
-    return textbox;
-}
+        Texts() : text(font) {};
 
-int userInput(int intString, int limit, bool isSelected, std::string& input) {
-    int stringsize = input.size();
-    int intInput;
-    if(isSelected && stringsize < limit) {
-        input.append(std::to_string(intString));
-        intInput = std::stoi(input);
-        return intInput;
-    }
-    else {
-        return intInput;
-    }
-}
+        Texts(sf::Font& mainFont, std::string name, int fontsize, sf::Color color, sf::Vector2f position) : text(font) {
+            this->font = mainFont;
+            this->name = name;
+            this->color = color;
+            this->position = position;
+            this->fontsize = fontsize;
+            text.setFont(mainFont); 
+            text.setString(name);
+            text.setCharacterSize(fontsize);
+            text.setFillColor(color);
+            text.setPosition(position);
+        }
 
-int clickCheck(int textBoxNumber, clickBoxes &clickbox, clickBoxes sizeboxes[], clickBoxes angleboxes[], clickBoxes massboxes[], clickBoxes veloboxes[], float mouse_x, float mouse_y, bool &sizeClicked,  bool &angleClicked,  bool &massClicked,  bool &veloClicked, std::string &input) {
-    /*if((mouse_x >= clickbox.box_x1) && (mouse_x <= clickbox.box_x2) && (mouse_y >= clickbox.box_y1) && (mouse_y <= clickbox.box_y2)) {
-        //clickbox clicked
-    }*/
-    if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-        for(int i = 0; i < textBoxNumber; i++) {
-            if((mouse_x >= sizeboxes[i].box_x1) && (mouse_x <= sizeboxes[i].box_x2) && (mouse_y >= sizeboxes[i].box_y1) && (mouse_y <= sizeboxes[i].box_y2)) {
-                if(!sizeClicked) {
-                    input = "";
-                }
-                sizeClicked = true;
-                cout << "Size clicked TRUE" << "\n";
-                return i;
-            }
-            if((mouse_x >= angleboxes[i].box_x1) && (mouse_x <= angleboxes[i].box_x2) && (mouse_y >= angleboxes[i].box_y1) && (mouse_y <= angleboxes[i].box_y2)) {
-                if(!angleClicked) {
-                    input = "";
-                }
-                sizeClicked = false;
-                angleClicked = true;
-                //cout << "Angle clicked TRUE" << "\n";
-                return i;
-            }
-            if((mouse_x >= massboxes[i].box_x1) && (mouse_x <= massboxes[i].box_x2) && (mouse_y >= massboxes[i].box_y1) && (mouse_y <= massboxes[i].box_y2)) {
-                if(!massClicked) {
-                    input = "";
-                }
-                sizeClicked = false;
-                angleClicked = false;
-                massClicked = true;
-                //cout << "Mass clicked TRUE" << "\n";
-                return i;
-            }
-            if((mouse_x >= veloboxes[i].box_x1) && (mouse_x <= veloboxes[i].box_x2) && (mouse_y >= veloboxes[i].box_y1) && (mouse_y <= veloboxes[i].box_y2)) {
-                if(!veloClicked) {
-                    input = "";
-                }
-                sizeClicked = false;
-                angleClicked = false;
-                massClicked = false;
-                veloClicked = true;
-                //cout << "Velo clicked TRUE" << "\n";
-                return i;
+        Texts(sf::Font& mainFont, int fontsize, sf::Color color, sf::Vector2f position, int ballNumber) : text(font) {
+            this->font = mainFont;
+            this->fontsize = fontsize;
+            this->color = color;
+            this->position = position;
+            this->ballNumber = ballNumber;
+            text.setFont(mainFont);
+            text.setCharacterSize(fontsize);
+            text.setFillColor(color);
+            std::string numberString = std::to_string(ballNumber);
+            name = "Ball " + numberString;
+            text.setString(name);
+            float ballNumberFloat = static_cast<float>(ballNumber);
+            position = {140, 190 + (ballNumberFloat*60)};
+            text.setPosition(position);
+        }
+};
+
+void addBallButton(bool mouseButtonReleased, clickBoxes &clickbox, float mouse_x, float mouse_y, bool &isSelected, int &textBoxNumber) {
+    if((mouse_x >= clickbox.box_x1) && (mouse_x <= clickbox.box_x2) && (mouse_y >= clickbox.box_y1) && (mouse_y <= clickbox.box_y2)) {
+        if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+            clickbox.box.setFillColor(sf::Color::Black);
+            isSelected = false;
+        }
+        if(mouseButtonReleased) {
+            clickbox.box.setFillColor(sf::Color::White);
+            textBoxNumber ++;
+            if (textBoxNumber == 8) {
+                textBoxNumber = 0;
             }
         }
-        cout << "Size clicked FALSE" << "\n";
+    }
+}
+
+int textBoxCheck(bool& isSelected, int textBoxNumber, clickBoxes inputBoxes[], float mouse_x, float mouse_y, bool &sizeClicked,  bool &angleClicked,  bool &massClicked,  bool &veloClicked) {
+        //cout << "yuh click" << "\n";
         sizeClicked = false;
         angleClicked = false;
         massClicked = false;
         veloClicked = false;
-        return 8;
+        isSelected = false;
+        
+        for(int i = 0; i < textBoxNumber; i++) {
+            if((mouse_x >= inputBoxes[i].box_x1) && (mouse_x <= inputBoxes[i].box_x2) && (mouse_y >= inputBoxes[i].box_y1) && (mouse_y <= inputBoxes[i].box_y2)) {
+                sizeClicked = true;
+                isSelected = true;
+                return i;
+            }
+            if((mouse_x >= inputBoxes[i+7].box_x1) && (mouse_x <= inputBoxes[i+7].box_x2) && (mouse_y >= inputBoxes[i+7].box_y1) && (mouse_y <= inputBoxes[i+7].box_y2)) {
+                angleClicked = true;
+                isSelected = true;
+                return i+7;
+            }
+            if((mouse_x >= inputBoxes[i+14].box_x1) && (mouse_x <= inputBoxes[i+14].box_x2) && (mouse_y >= inputBoxes[i+14].box_y1) && (mouse_y <= inputBoxes[i+14].box_y2)) {
+                massClicked = true;
+                isSelected = true;
+                return i+14;
+            }
+            if((mouse_x >= inputBoxes[i+21].box_x1) && (mouse_x <= inputBoxes[i+21].box_x2) && (mouse_y >= inputBoxes[i+21].box_y1) && (mouse_y <= inputBoxes[i+21].box_y2)) {
+                veloClicked = true;
+                isSelected = true;
+                return i+21;
+            }
         }
-    return 8;
+    return 29;
+}
+
+void textMove(sf::Text& inputText, std::string &input, clickBoxes inputBoxes[], int i, Texts textSave[]) {
+    if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+        float currentClickedBox_x = inputBoxes[i].box_x1;
+        float currentClickedBox_y = inputBoxes[i].box_y1; 
+        int previousindex;
+        if(i != previousindex && i != 29) {
+            input = textSave[i].text.getString();
+        }
+        previousindex = i;
+        inputText.setString(input + "_");
+        inputText.setPosition({currentClickedBox_x, currentClickedBox_y});
+        //cout << "yuh text" << "\n";
+    }
+    return;
+}
+
+void textStay(Texts textSave[], std::string input, clickBoxes inputBoxes[], int i) {
+    textSave[i].text.setString(input);
+    textSave[i].text.setPosition({inputBoxes[i].box_x1, inputBoxes[i].box_y1});
+}
+
+void userInput(int intString, int limit, bool isSelected, std::string& input) {
+    int stringsize = input.size();
+    if(isSelected && stringsize < limit) {
+        input.append(std::to_string(intString));
+        return;
+    }
+    else {
+        return;
+    }
+}
+
+void keypressedToString(const sf::Event::TextEntered& textEntered, bool& isSelected, sf::Text& inputText, sf::String& unicodeConvertString, std::string& input) {
+    if(textEntered.unicode < 128) {
+        if(isSelected) {    
+            if(textEntered.unicode == 8 && input.size() != 0) {
+                input.pop_back();
+                inputText.setString(input + "_");
+            }
+            if (textEntered.unicode >= 48 && textEntered.unicode <= 57) {
+                unicodeConvertString = textEntered.unicode;
+                std::string nonIntString = unicodeConvertString;
+                int intString = std::stoi(nonIntString);
+                userInput(intString, 3, true, input);
+                inputText.setString(input + "_");
+            }
+
+        }
+    }
+    return;
+}
+
+
+void saveInputs(std::vector<int>& ballSize, std::vector<float>& ballAngle, std::vector<int>& ballMass, std::vector<int>& ballInitialVelocity, bool isSelected, int index, std::string input) {
+    cout << "isSelected " << isSelected << "\n";
+    cout << "Index " << index << "\n";
+    if(input.size() == 0) {
+        input = "0";
+    }
+    if(isSelected && (index < 7)) {
+        ballSize[index] = std::stoi(input);
+        cout << ballSize[index] << "\n";
+    }
+    if(isSelected && (index >= 7) && (index < 14)) {
+        ballAngle[index-7] = (std::stoi(input))*(M_PI/180);
+        cout << ballAngle[index-7] << "\n";
+    }
+    if(isSelected && (index >= 14) && (index < 21)) {
+        ballMass[index-14] = std::stoi(input);
+        cout << ballMass[index-14] << "\n";
+    }
+    if(isSelected && (index >= 21) && (index < 28)) {
+        ballInitialVelocity[index-21] = std::stoi(input);
+        cout << ballInitialVelocity[index-21] << "\n";
+    }
+    return;
+}
+
+void menuSwitch(bool& menu, bool& escapeWasPressed, bool& generate) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape)) {
+        if (!escapeWasPressed) 
+        {
+            menu = !menu;   
+            generate = true;
+            escapeWasPressed = true;
+        }
+    }
+    else {
+        escapeWasPressed = false;
+    }
+}
+
+void pauseSwitch(bool& spaceWasPressed, bool& pause) {
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space)) 
+    {
+        if (!spaceWasPressed) 
+        {
+            pause = !pause;   
+            spaceWasPressed = true;
+        }
+    }
+    else
+    {
+        spaceWasPressed = false;
+    }
+}
+
+bool randomPositionChecker(float x_rand1, float x_rand2, float y_rand1, float y_rand2, int ballSize1, int ballSize2) {
+    float x_temp;
+    float y_temp;
+    float randdistance;
+    x_temp = x_rand1 - x_rand2;
+    y_temp = y_rand1 - y_rand2;
+    randdistance = sqrt(pow(x_temp, 2) + pow(y_temp, 2));
+    return randdistance < (ballSize1 + ballSize2);
+}
+
+void randomPositionGenerator(std::vector<float>& initialPositionX, std::vector<float>& initialPositionY, std::vector<int> ballSize) {
+    bool validPosition;
+    int attemps = 0;
+    float x_rand_array[7];
+    float y_rand_array[7];
+    std::mt19937 rng(static_cast<unsigned>(std::time(nullptr)));
+    for(int i = 0; i < 7; i++) {
+        std::uniform_real_distribution<float> x_rand(1 + ballSize[i], 1279 - ballSize[i]);
+        std::uniform_real_distribution<float> y_rand(1 + ballSize[i], 719 - ballSize[i]);
+        x_rand_array[i] = x_rand(rng);
+        y_rand_array[i] = y_rand(rng);
+        cout << x_rand_array[i] << "\n";
+        cout << y_rand_array[i] << "\n";
+        //cout << "positions succcesfully generated" << "\n";
+    }
+    for(int i = 0; i < 7; i++) {
+        for(int j = 0; j < 7; j++) {
+            if(i == j) {continue;}
+            validPosition = randomPositionChecker(x_rand_array[i], x_rand_array[j], y_rand_array[i], y_rand_array[j], ballSize[i], ballSize[j]);
+            cout << "Position check " << validPosition << "\n";
+            while(validPosition && attemps < 11) {
+                std::uniform_real_distribution<float> x_rand(1 + ballSize[j], 1279 - ballSize[j]);
+                std::uniform_real_distribution<float> y_rand(1 + ballSize[j], 719 - ballSize[j]);
+                x_rand_array[j] = x_rand(rng);
+                y_rand_array[j] = y_rand(rng);
+                /*cout << "index i " << i << "\n";
+                cout << "index j " << j << "\n";
+                cout << x_rand_array[j] << "\n";
+                cout << y_rand_array[j] << "\n";*/
+                cout << "positions succcesfully regenerated" << "\n";
+                cout << "Position check 2 " << validPosition << "\n";
+                validPosition = randomPositionChecker(x_rand_array[i], x_rand_array[j], y_rand_array[i], y_rand_array[j], ballSize[i], ballSize[j]);
+                attemps++;
+            }
+            //cout << "positions succcesfully checked" << "\n";
+            attemps = 0;
+        }
+    }
+    for(int i = 0; i < 7; i++) {
+        cout << "positions succcesfully updated" << "\n";
+        initialPositionX[i] = x_rand_array[i];
+        initialPositionY[i] = y_rand_array[i];
+        cout << initialPositionX[i] << "\n";
+        cout << initialPositionY[i] << "\n";
+    }
 }
 
 int main()
 {
+    //cout << "yuh start" << "\n";
+    sf::RenderWindow window(sf::VideoMode({1280, 720}), "Physics Collisions", sf::Style::Titlebar);
+    window.setFramerateLimit(120);
+    window.setKeyRepeatEnabled(false);
+
+    sf::Font mainFont;
+    if(!mainFont.openFromFile("C:\\Users\\nicho\\Desktop\\VSCode Projects\\SFML\\SFML-3.0.0\\bin\\Fonts\\roboto.ttf")) {
+        throw std::runtime_error("Failed to load font");
+    }
+
+    vector<Ball> balls(7);
+    //balls.emplace_back(90, 100, 100, 5, M_PI/2, 9);
+    //balls.emplace_back(30, 500, 500, 5, M_PI/4, 3);
+
+
+    Texts menutext(mainFont, "Ball Collisions", 80, sf::Color::White, {410,80});
+    Texts addball(mainFont, "Click to add ball", 30, sf::Color::Black, {60, 180});
+    sf::String unicodeConvertString;
+    Texts inputText(mainFont, unicodeConvertString, 30, sf::Color::White, {410,80});
+    Texts textSave[28];
+    for(int i = 0; i < 28; i++) {
+        textSave[i] = Texts(mainFont, "", 30, sf::Color::White, {0,0});
+    }
+    Texts inputLabelSize(mainFont, "Size", 20, sf::Color::White, {350, 215});
+    Texts inputLabelAngle(mainFont, "Angle", 20, sf::Color::White, {550, 215});
+    Texts inputLabelMass(mainFont, "Mass", 20, sf::Color::White, {750, 215});
+    Texts inputLabelVelo(mainFont, "Initial Velocity", 20, sf::Color::White, {950, 215});
+    Texts ballTextLabels[7];
+    for(int i = 0; i < 7; i++) {
+        ballTextLabels[i] = Texts(mainFont, 30, sf::Color::White, {140, 190}, i+1);
+    }
+
+    //cout << "yuh ckeckpoint 1" << "\n";
+    clickBoxes clickbox({50, 180}, {236, 40}, sf::Color::White, false);
+
+    //sizeboxes are indexed 0-6
+    //angleboxes are indexed 7-13
+    //massboxes are indexed 14-20
+    //veloboxes are indexed 21-27
+    clickBoxes inputBoxes[28];
+    for(int i = 0; i < 28; i++) {
+        float iFloat;
+        iFloat = static_cast<float>(i);
+        if(i >= 0 && i < 7) {
+            inputBoxes[i] = clickBoxes({350, 250 + iFloat*60}, {150, 35}, sf::Color::Transparent, true);
+        }
+        if(i >= 7 && i < 14) {
+            inputBoxes[i] = clickBoxes({550, 250 + (iFloat-7)*60}, {150, 35}, sf::Color::Transparent, true);
+        }
+        if(i >= 14 && i < 21) {
+            inputBoxes[i] = clickBoxes({750, 250 + (iFloat-14)*60}, {150, 35}, sf::Color::Transparent, true);
+        }
+        if(i >= 21 && i < 28) {
+            inputBoxes[i] = clickBoxes({950, 250 + (iFloat-21)*60}, {150, 35}, sf::Color::Transparent, true);
+        }
+    }
+
     bool pause = true;
     bool spaceWasPressed = false;
     bool menu = true;
     bool escapeWasPressed = false;
+    bool generate = false;
     bool isSelected = false;
     bool sizeClicked = false;
     bool angleClicked = false;
     bool massClicked = false;
     bool veloClicked = false;
-    vector<Ball> balls;
-    balls.emplace_back(90, 100, 100, 5, M_PI/2, 9);
-    balls.emplace_back(30, 500, 500, 3, M_PI/3, 1);
-    balls.emplace_back(30, 800, 300, 3, M_PI/4, 1);
-    balls.emplace_back(30, 600, 300, 10, M_PI/4, 1);
-    //balls.emplace_back(30, 300, 300, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 1000, 300, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 800, 600, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 1000, 500, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 500, 700, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 100, 600, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 300, 300, 3, M_PI/4, 1);
-    //balls.emplace_back(30, 1100, 600, 3, M_PI/4, 1);
-
     
-    
-
-    sf::RenderWindow window(sf::VideoMode({1280, 720}), "Physics Collisions", sf::Style::Titlebar);
-    window.setFramerateLimit(120);
-    window.setKeyRepeatEnabled(false);
-
-    sf::Font font("C:\\Users\\nicho\\Desktop\\VSCode Projects\\SFML\\SFML-3.0.0\\bin\\Fonts\\roboto.ttf");
-
-    sf::Text menutext(font);
-    Texts(menutext, "Ball Collisions", 80, sf::Color::White, {410,80});
-
-    sf::Text addball(font);
-    Texts(addball, "Click to add ball", 30, sf::Color::Black, {60, 180});
-
-    sf::String myString;
-    sf::Text inputText(font);
-    Texts(inputText, myString, 30, sf::Color::White, {420, 180});
-
-    clickBoxes clickbox({50, 180}, {236, 40}, sf::Color::White, false);
-    clickBoxes sizeboxes[7];
-    clickBoxes angleboxes[7];
-    clickBoxes massboxes[7];
-    clickBoxes veloboxes[7];
-    for(int i = 0; i < 7; i++) {
-        float iFloat = static_cast<float>(i);
-        sizeboxes[i] = clickBoxes({350, 250 + iFloat*60}, {150, 35}, sf::Color::Transparent, true);
-        angleboxes[i] = clickBoxes({550, 250 + iFloat*60}, {150, 35}, sf::Color::Transparent, true);
-        massboxes[i] = clickBoxes({750, 250 + iFloat*60}, {150, 35}, sf::Color::Transparent, true);
-        veloboxes[i] = clickBoxes({950, 250 + iFloat*60}, {150, 35}, sf::Color::Transparent, true);
-    }
-
     float currentClickedBox_x;
     float currentClickedBox_y;
 
@@ -334,13 +522,15 @@ int main()
     float mouse_y;
 
     int textBoxNumber = 0;
+    int index; 
 
     std::string input;
-    std::vector<int> ballSize;
-    std::vector<int> ballAngle;
-    std::vector<int> ballMass;
-    std::vector<int> ballInitialVelocity;
-    std::vector<sf::Vector2f> ballInitialPosition;
+    std::vector<int> ballSize(7);
+    std::vector<float> ballAngle(7);
+    std::vector<int> ballMass(7);
+    std::vector<int> ballInitialVelocity(7);
+    std::vector<float> ballInitialPositionX(7);
+    std::vector<float> ballInitialPositionY(7);
 
 
     while (window.isOpen())
@@ -352,130 +542,68 @@ int main()
             if (event->is<sf::Event::Closed>())
                 window.close();
             if(menu) {
-                int index;
                 if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-                    inputText.setString(input + "_");
-                    index = clickCheck(textBoxNumber, clickbox, sizeboxes, angleboxes, massboxes, veloboxes, mouse_x, mouse_y, sizeClicked, angleClicked, massClicked, veloClicked, input); 
+                    index = textBoxCheck(isSelected, textBoxNumber, inputBoxes, mouse_x, mouse_y, sizeClicked, angleClicked, massClicked, veloClicked);
                 }
-                inputText.setPosition({currentClickedBox_x, currentClickedBox_y});
-                if(sizeClicked) {
-                    currentClickedBox_x = sizeboxes[index].box_x1;
-                    currentClickedBox_y = sizeboxes[index].box_y1;      
-                    if(event->is<sf::Event::MouseButtonReleased>()) {
-                        isSelected = true;
-                    }
-                }
-                else if(angleClicked) {
-                    currentClickedBox_x = angleboxes[index].box_x1;
-                    currentClickedBox_y = angleboxes[index].box_y1;      
-                    if(event->is<sf::Event::MouseButtonReleased>()) {
-                        isSelected = true;
-                    }
-                }
-                else if(massClicked) {
-                    currentClickedBox_x = massboxes[index].box_x1;
-                    currentClickedBox_y = massboxes[index].box_y1;      
-                    if(event->is<sf::Event::MouseButtonReleased>()) {
-                        isSelected = true;
-                    }
-                }
-                else if(veloClicked) {
-                    currentClickedBox_x = veloboxes[index].box_x1;
-                    currentClickedBox_y = veloboxes[index].box_y1;      
-                    if(event->is<sf::Event::MouseButtonReleased>()) {
-                        isSelected = true;
-                    }
-                }
-                else if((mouse_x >= clickbox.box_x1) && (mouse_x <= clickbox.box_x2) && (mouse_y >= clickbox.box_y1) && (mouse_y <= clickbox.box_y2)) {
-                    if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-                        clickbox.box.setFillColor(sf::Color::Black);
-                        isSelected = false;
-
-                    }
-                    else {
-                        clickbox.box.setFillColor(sf::Color::White);
-                    }
-                    if(event->is<sf::Event::MouseButtonReleased>()) {
-                        textBoxNumber ++;
-                        if (textBoxNumber == 8) {
-                            textBoxNumber = 0;
-                        }
-                        //cout << textBoxNumber << "\n";
-                    }
-                }
-                else {
-                    if(sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-                        isSelected = false;
-                    }
-                }
-
-                if(event->is<sf::Event::TextEntered>()) {
-                    const auto* textEntered = event->getIf<sf::Event::TextEntered>();
-                    if(textEntered->unicode < 128) {
-                        if(isSelected && (sizeClicked || angleClicked || massClicked || veloClicked)) {    
-                            if(textEntered->unicode == 8 && input.size() != 0) {
-                                input.pop_back();
-                                inputText.setString(input + "_");
-                            }
-                            if (textEntered->unicode >= 48 && textEntered->unicode <= 57) {
-                                myString = textEntered->unicode;
-                                std::string testString = myString;
-                                int intString = std::stoi(testString);
-                                userInput(intString, 6, true, input);
-                                inputText.setString(input + "_");
-                            }
-                            if(sizeClicked) {
-                                ballSize[index] = std::stoi(input);
-                            }
-                            if(angleClicked) {
-                                ballAngle[index] = std::stoi(input);
-                            }
-                            if(massClicked) {
-                                ballMass[index] = std::stoi(input);
-                            }
-                            if(veloClicked) {
-                                ballInitialVelocity[index] = std::stoi(input);
-                            }    
-                        }
-                    }
+                bool mouseButtonReleased = event->is<sf::Event::MouseButtonReleased>();
+                addBallButton(mouseButtonReleased, clickbox, mouse_x, mouse_y, isSelected, textBoxNumber);
+                textMove(inputText.text, input, inputBoxes, index, textSave);
+                if(auto textEntered = event->getIf<sf::Event::TextEntered>()) {
+                    keypressedToString(*textEntered, isSelected, inputText.text, unicodeConvertString, input);
+                    saveInputs(ballSize, ballAngle, ballMass, ballInitialVelocity, isSelected, index, input);
+                    textStay(textSave, input, inputBoxes, index);
                 }
             }
         }
 
         window.clear();
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Escape))
-        {
-            if (!escapeWasPressed) 
-            {
-                menu = !menu;   
-                escapeWasPressed = true;
-            }
-        }
-        else
-        {
-            escapeWasPressed = false;
-        }
+        menuSwitch(menu, escapeWasPressed, generate);
+        pauseSwitch(spaceWasPressed, pause);
 
         if(menu) {
-            window.draw(menutext);
+            window.draw(menutext.text);
             window.draw(clickbox.box);
-            window.draw(addball);
+            window.draw(addball.text);
             if(isSelected) {
-                window.draw(inputText);
+                window.draw(inputText.text);
             }
             if(textBoxNumber != 0) {
+                window.draw(inputLabelSize.text);
+                window.draw(inputLabelAngle.text);
+                window.draw(inputLabelMass.text);
+                window.draw(inputLabelVelo.text);
                 for(int i = 0; i < textBoxNumber; i++) {
-                    window.draw(TextBoxes(font, i+1, i+1));
-                    window.draw(sizeboxes[i].box);
-                    window.draw(angleboxes[i].box);
-                    window.draw(massboxes[i].box);
-                    window.draw(veloboxes[i].box);
+                    window.draw(ballTextLabels[i].text);
+                    window.draw(inputBoxes[i].box);
+                    window.draw(inputBoxes[i+7].box);
+                    window.draw(inputBoxes[i+14].box);
+                    window.draw(inputBoxes[i+21].box);
+                    if(index != i) {
+                        window.draw(textSave[i].text);
+                    }
+                    if(index != i+7) {
+                        window.draw(textSave[i+7].text);
+                    }
+                    if(index != i+14) {
+                        window.draw(textSave[i+14].text);
+                    }
+                    if(index != i+21) {
+                        window.draw(textSave[i+21].text);
+                    }
                 }
             }
         }
 
         else {
+            if(generate) {
+                randomPositionGenerator(ballInitialPositionX, ballInitialPositionY, ballSize);
+                for(int i = 0; i < textBoxNumber; i++) {
+                    balls[i] = Ball(ballSize[i], ballInitialPositionX[i], ballInitialPositionY[i], ballInitialVelocity[i], ballAngle[i], ballMass[i]);
+                    generate = false;
+                }
+            }
+            
+            
             for(int j = 0; j < balls.size(); j++) {
                 if(!pause) { 
                     balls[j].BallMovement();
@@ -494,19 +622,6 @@ int main()
         }
 
         window.display();
-
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Space))
-        {
-            if (!spaceWasPressed) 
-            {
-                pause = !pause;   
-                spaceWasPressed = true;
-            }
-        }
-        else
-        {
-            spaceWasPressed = false;
-        }
 
     }
 }
